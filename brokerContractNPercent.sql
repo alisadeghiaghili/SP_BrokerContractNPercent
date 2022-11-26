@@ -1,21 +1,31 @@
+USE [BI]
+GO
+/****** Object:  StoredProcedure [Phi].[SP_BrokerContractNPercent]    Script Date: 23/11/2022 11:45:17 am ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 --Declare @StartDate char(10),
 --	    @EndDate char(10),
 --		@NPercent int,
 --		@BrokerCode int,
---		@BuyerSeller int;
+--		@BuyerSeller int,
+--		@RingID int;
 
 --set @StartDate = '1401/08/16';
 --set @EndDate = '1401/08/16';
 --set @BrokerCode = 130;
 --set @NPercent = 20;
---set @BuyerSeller = 0;
+--set @BuyerSeller = 1;
+--set @RingID = 2; --0:all
 
 ALTER Procedure [Phi].[SP_BrokerContractNPercent] 
 	@StartDate char(10),
 	@EndDate char(10),
 	@NPercent int,
 	@BrokerCode int,
-	@BuyerSeller int
+	@BuyerSeller int,
+	@RingID int
 
 As
 
@@ -100,7 +110,13 @@ FROM [Auction_DM].[Auction_Fact].[CustomerContract]
 		
 	'
 
-Set @Query = @Query + concat('Where Date.PersianDate between ''', @StartDate, ''' and ''', @EndDate, '''', '), result as (')
+Set @Query = @Query + concat('Where Date.PersianDate between ''', @StartDate, ''' and ''', @EndDate, '''')
+
+If @RingID <> 0
+	set @Query = @Query + ' And '  + concat('Ring.ID = ', @RingID)
+
+set @Query = @Query + '), result as ('
+
 If @BuyerSeller = 0
 	
 	Set @Query = @Query + concat('Select * 
@@ -123,9 +139,8 @@ If @BuyerSeller = 2
 	Select * 
 	From main
 	Where SellerBrokerCode = ', @brokerCode)
-Set @Query = @Query +'),'
 
-Set @Query = @Query + '
+Set @Query = @Query + '),
 resultGrouped as (
 	SELECT *
 	FROM (SELECT Row_Number()OVER(partition BY GroupName, SubGroupName Order by GroupName, SubGroupName) AS [RowNumber], *
@@ -139,4 +154,5 @@ From resultGrouped')
 
 set @Query = @Query + ' Go;'
 
-Execute(@Query)
+select(@Query)
+--Execute(@Query)
